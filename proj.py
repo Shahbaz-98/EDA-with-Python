@@ -7,51 +7,34 @@ import seaborn as sns
 import sqlite3
 
 
-CON = ""
-C = ""
-DF = ""
-
-
 def load_data():
+    """loads the required .csv files."""
     return pd.read_csv(r'C:\Users\Dell\OneDrive\Desktop\netflix_titles.csv')
 
 
 def db_connection():
+    """creates a connection to the database."""
     return sqlite3.connect("netflix.db")
 
 
 def init_app():
-    global DF
-    DF = load_data()
-    global CON
-    CON = db_connection()
-    global C
-    C = CON.cursor()
-    DF.to_sql('MyTable', CON, if_exists='append', index=False)
-    DF = pd.read_sql_query("SELECT * from MyTable", CON)
-    DF = DF.drop_duplicates(['title', 'country', 'type', 'release_year'])
-    DF['date_added'] = pd.to_datetime(DF['date_added'])
-    for ratings in DF.index:
-        if DF.loc[ratings, 'rating'] == 'UR':
-            DF.loc[ratings, 'rating'] = 'NR'
-
-
-init_app()
-
-
-def release_sort_func():
-    return DF.groupby(['release_year', 'type'])['type'].value_counts().sort_values(ascending=False)
-
-
-def country_sort_func():
-    return DF.groupby(['country', 'type'])['type'].value_counts().sort_values(ascending=False)
-
-
-def listed_sort_func():
-    return DF.groupby(['listed_in'])['type'].value_counts()
+    """initializes all the required variables"""
+    temp_df = load_data()
+    temp_con = db_connection()
+    temp_cur = temp_con.cursor()
+    temp_df.to_sql('MyTable', temp_con, if_exists='append', index=False)
+    temp_df = pd.read_sql_query("SELECT * from MyTable", temp_con)
+    temp_df = temp_df.drop_duplicates(['title', 'country', 'type', 'release_year'])
+    temp_df['date_added'] = pd.to_datetime(temp_df['date_added'])
+    for temp_ratings in temp_df.index:
+        if temp_df.loc[temp_ratings, 'rating'] == 'UR':
+            temp_df.loc[temp_ratings, 'rating'] = 'NR'
+    return temp_df, temp_con, temp_cur
 
 
 def ratings():
+    """plots a graph that displays the comparison between different ratings
+    and the individual data available for each rating."""
     plt.figure(figsize=(8, 6))
     DF['rating'].value_counts(normalize=True).plot.bar()
     plt.title('Ratings')
@@ -61,6 +44,7 @@ def ratings():
 
 
 def freq_tr():
+    """plots a graph that displays the comparison between type of entry and the ratings they fall under."""
     plt.figure(figsize=(10, 8))
     sns.countplot(x='rating', hue='type', data=DF)
     plt.title('comparing frequency between type and rating')
@@ -68,60 +52,66 @@ def freq_tr():
 
 
 def year_added():
+    """sorts and displays the data acc. to the year they were added to Netflix."""
     DF['year_added'] = DF['date_added'].dt.year
     year_sort = DF.groupby('year_added')['type'].value_counts(normalize=True) * 100
     print(year_sort)
 
 
 def release_sort():
-    cf = release_sort_func()
+    """sorts and displays the data acc. to the year they were released to the public."""
+    cf = DF.groupby(['release_year', 'type'])['type'].value_counts().sort_values(ascending=False)
     print(cf)
 
 
 def country_sort():
-    cf = country_sort_func()
+    """sorts and displays the data acc. to the country they were released in."""
+    cf = DF.groupby(['country', 'type'])['type'].value_counts().sort_values(ascending=False)
     print(cf)
 
 
 def listed_sort():
-    cf = listed_sort_func()
+    """sorts and displays the data acc. to the category they were listed in."""
+    cf = DF.groupby(['listed_in'])['type'].value_counts()
     print(cf)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--ratings', action='store', dest='ratings', help='Shows plot for ratings.', nargs='?'
-                        , const=1)
-    parser.add_argument('-t', '--typeComparison', action='store', dest='frequencyTR', help='Shows comparison between '
-                                                                                           'type and ratings.', nargs='?'
-                        , const=2)
-    parser.add_argument('-y', '--yearAdded', action='store', dest='yearAdded', help='Shows frequency of Movies and '
-                                                                                    'TV Shows released in years.', nargs='?'
-                        , const=3)
-    parser.add_argument('-s', '--releaseSort', action='store', dest='releaseSort', help='Shows count of Movies and TV '
-                                                                                        'Shows sorted acc. '
-                                                                                        'to release year.', nargs='?'
-                        , const=3)
-    parser.add_argument('-c', '--countrySort', action='store', dest='countrySort', help='Shows count of Movies and '
-                                                                                        'TV Shows sorted '
-                                                                                        'acc. to countries.', nargs='?'
-                        , const=4)
-    parser.add_argument('-l', '--listedSort', action='store', dest='listedSort', help='Shows count of Movies and '
-                                                                                      'TV Shows sorted acc. '
-                                                                                      'to the category of listing.',
+    parser.add_argument('-r', '--ratings', action='store', dest='ratings', help='Shows plot for ratings.', nargs='?',
+                        const=1)
+    parser.add_argument('-t', '--typeComparison', action='store', dest='frequency_tr', help='Shows comparison between '
+                                                                                            'type and ratings.',
+                        nargs='?', const=2)
+    parser.add_argument('-y', '--yearAdded', action='store', dest='year_added', help='Shows frequency of Movies and '
+                                                                                     'TV Shows released '
+                                                                                     'in years.', nargs='?', const=3)
+    parser.add_argument('-s', '--releaseSort', action='store', dest='release_sort', help='Shows count of Movies and TV '
+                                                                                         'Shows sorted acc. '
+                                                                                         'to release year.', nargs='?',
+                        const=3)
+    parser.add_argument('-c', '--countrySort', action='store', dest='country_sort', help='Shows count of Movies and '
+                                                                                         'TV Shows '
+                                                                                         'sorted acc. to countries.',
+                        nargs='?', const=4)
+    parser.add_argument('-l', '--listedSort', action='store', dest='listed_sort', help='Shows count of Movies '
+                                                                                       'and TV Shows sorted acc. '
+                                                                                       'to the category of listing.',
                         nargs='?', const=5)
+
+    DF, con, c = init_app()
 
     args = parser.parse_args()
     rating = args.ratings
-    freqTRD = args.frequencyTR
-    year = args.yearAdded
-    release = args.releaseSort
-    country = args.countrySort
-    listed = args.listedSort
+    freq_trd = args.frequency_tr
+    year = args.year_added
+    release = args.release_sort
+    country = args.country_sort
+    listed = args.listed_sort
 
     if rating:
         ratings()
-    elif freqTRD:
+    elif freq_trd:
         freq_tr()
     elif year:
         year_added()
@@ -131,4 +121,3 @@ if __name__ == "__main__":
         country_sort()
     elif listed:
         listed_sort()
-
