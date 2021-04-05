@@ -19,60 +19,60 @@ def db_connection():
 
 def init_app():
     """initializes all the required variables"""
-    temp_df = load_data()
-    temp_con = db_connection()
-    temp_cur = temp_con.cursor()
-    temp_df.to_sql('MyTable', temp_con, if_exists='append', index=False)
-    temp_df = pd.read_sql_query("SELECT * from MyTable", temp_con)
-    temp_df = temp_df.drop_duplicates(['title', 'country', 'type', 'release_year'])
-    temp_df['date_added'] = pd.to_datetime(temp_df['date_added'])
-    for temp_ratings in temp_df.index:
-        if temp_df.loc[temp_ratings, 'rating'] == 'UR':
-            temp_df.loc[temp_ratings, 'rating'] = 'NR'
-    return temp_df, temp_con, temp_cur
+    df = load_data()
+    con = db_connection()
+    cur = con.cursor()
+    df.to_sql('MyTable', con, if_exists='append', index=False)
+    df = pd.read_sql_query("SELECT * from MyTable", con)
+    df = df.drop_duplicates(['title', 'country', 'type', 'release_year'])
+    df['date_added'] = pd.to_datetime(df['date_added'])
+    for temp_ratings in df.index:
+        if df.loc[temp_ratings, 'rating'] == 'UR':
+            df.loc[temp_ratings, 'rating'] = 'NR'
+    return df, con, cur
 
 
-def ratings():
+def ratings(df):
     """plots a graph that displays the comparison between different ratings
     and the individual data available for each rating."""
     plt.figure(figsize=(8, 6))
-    DF['rating'].value_counts(normalize=True).plot.bar()
+    df['rating'].value_counts(normalize=True).plot.bar()
     plt.title('Ratings')
     plt.xlabel('rating')
     plt.ylabel('relative frequency')
     plt.show()
 
 
-def freq_tr():
+def freq_tr(df):
     """plots a graph that displays the comparison between type of entry and the ratings they fall under."""
     plt.figure(figsize=(10, 8))
-    sns.countplot(x='rating', hue='type', data=DF)
+    sns.countplot(x='rating', hue='type', data=df)
     plt.title('comparing frequency between type and rating')
     plt.show()
 
 
-def year_added():
+def year_added(df):
     """sorts and displays the data acc. to the year they were added to Netflix."""
-    DF['year_added'] = DF['date_added'].dt.year
-    year_sort = DF.groupby('year_added')['type'].value_counts(normalize=True) * 100
+    df['year_added'] = df['date_added'].dt.year
+    year_sort = df.groupby('year_added')['type'].value_counts(normalize=True) * 100
     print(year_sort)
 
 
-def release_sort():
+def release_sort(df):
     """sorts and displays the data acc. to the year they were released to the public."""
-    cf = DF.groupby(['release_year', 'type'])['type'].value_counts().sort_values(ascending=False)
+    cf = df.groupby(['release_year', 'type'])['type'].value_counts().sort_values(ascending=False)
     print(cf)
 
 
-def country_sort():
+def country_sort(df):
     """sorts and displays the data acc. to the country they were released in."""
-    cf = DF.groupby(['country', 'type'])['type'].value_counts().sort_values(ascending=False)
+    cf = df.groupby(['country', 'type'])['type'].value_counts().sort_values(ascending=False)
     print(cf)
 
 
-def listed_sort():
+def listed_sort(df):
     """sorts and displays the data acc. to the category they were listed in."""
-    cf = DF.groupby(['listed_in'])['type'].value_counts()
+    cf = df.groupby(['listed_in'])['type'].value_counts()
     print(cf)
 
 
@@ -99,7 +99,7 @@ if __name__ == "__main__":
                                                                                        'to the category of listing.',
                         nargs='?', const=5)
 
-    DF, con, c = init_app()
+    df, con, c = init_app()
 
     args = parser.parse_args()
     rating = args.ratings
@@ -110,14 +110,14 @@ if __name__ == "__main__":
     listed = args.listed_sort
 
     if rating:
-        ratings()
+        ratings(df)
     elif freq_trd:
-        freq_tr()
+        freq_tr(df)
     elif year:
-        year_added()
+        year_added(df)
     elif release:
-        release_sort()
+        release_sort(df)
     elif country:
-        country_sort()
+        country_sort(df)
     elif listed:
-        listed_sort()
+        listed_sort(df)
